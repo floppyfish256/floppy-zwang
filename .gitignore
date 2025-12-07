@@ -1,0 +1,4 @@
+secrets/
+tasks.db
+token.pickle
+.vscode/

@@ -142,7 +142,7 @@ def get_gc_event_id(task_id):
 # Google Calendar helpers
 # -----------------------
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
-CREDENTIALS_FILE = 'credentials.json'
+CREDENTIALS_FILE = 'secrets/credentials.json'
 TOKEN_PICKLE = 'token.pickle'
 
 def ensure_google_available():
