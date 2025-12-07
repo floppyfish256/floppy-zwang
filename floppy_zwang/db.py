@@ -1,7 +1,6 @@
 import sqlite3
 from pathlib import Path
 
-# Use a db filename relative to the project directory; adjust if needed
 DB_FILENAME = str(Path(__file__).resolve().parent.joinpath("../tasks.db"))
 
 

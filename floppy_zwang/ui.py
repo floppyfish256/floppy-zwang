@@ -1,4 +1,3 @@
-# ui.py
 import threading
 import datetime
 import logging
@@ -28,27 +27,35 @@ class TaskerApp:
         # ttkbootstrap theme is set by the Window in main.py
 
         # --- Top frame ---
-        top = ttk.Frame(root, padding=(8,8))
+        top = ttk.Frame(root, padding=(8, 8))
         top.pack(fill=tk.X)
 
-        self.title_var = tk.StringVar()
-        self.title_entry = PlaceholderEntry(
-            top, textvariable=self.title_var, width=40, placeholder="Task title"
+        # Use grid for even spacing
+        top.columnconfigure(0, weight=2)   # title
+        top.columnconfigure(1, weight=1)   # tags
+        top.columnconfigure(2, weight=1)   # date
+        top.columnconfigure(3, weight=0)   # priority spinbox
+        top.columnconfigure(4, weight=0)   # add button
+
+        self.title_entry = PlaceholderEntry(top, placeholder="Task title")
+        self.title_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+
+        self.tags_entry = PlaceholderEntry(top, placeholder="Tags")
+        self.tags_entry.grid(row=0, column=1, sticky="ew", padx=8)
+
+        self.due_widget = DateEntry(top)
+        self.due_widget.grid(row=0, column=2, sticky="ew", padx=8)
+
+        self.priority_var = tk.IntVar(value=2)
+        self.priority_spin = ttk.Spinbox(
+            top, from_=0, to=5, width=3, textvariable=self.priority_var
         )
-        self.title_entry.pack(side=tk.LEFT, padx=(0, 8))
+        self.priority_spin.grid(row=0, column=3, sticky="ew", padx=8)
 
-        self.tags_entry = PlaceholderEntry(top, width=20, placeholder="Tags")
-        self.tags_entry.pack(side=tk.LEFT, padx=(8, 8))
+        ttk.Button(top, text="Add Task", command=self.quick_add).grid(
+            row=0, column=4, sticky="ew"
+        )
 
-        # --- Due date (custom) ---
-        self.due_widget = DateEntry(top, width=12)
-        self.due_widget.pack(side=tk.LEFT, padx=(0, 8))
-        # set default
-        self.root.after(0, lambda: self.due_widget.set_date(datetime.date.today()))
-
-        self.priority_var = tk.IntVar(value=0)
-        ttk.Spinbox(top, from_=0, to=5, width=3, textvariable=self.priority_var).pack(side=tk.LEFT)
-        ttk.Button(top, text="Add Task", command=self.quick_add).pack(side=tk.LEFT)
 
         # --- Toolbar ---
         toolbar = ttk.Frame(root, padding=(8,4))
@@ -67,7 +74,7 @@ class TaskerApp:
         sort_box.pack(side=tk.LEFT)
         sort_box.bind("<<ComboboxSelected>>", lambda e: self.load_tasks())
 
-        ttk.Button(toolbar, text="Sync selected → Google Calendar",
+        ttk.Button(toolbar, text="Sync selected to Google Calendar",
                   command=self.sync_selected_to_google).pack(side=tk.RIGHT)
 
         self.default_sort_var = tk.BooleanVar(value=True)
@@ -108,21 +115,48 @@ class TaskerApp:
 
     # --- Methods ---
     def quick_add(self):
-        title = self.title_var.get().strip()
-        if not title:
-            messagebox.showwarning("Empty title", "Please enter a task title.")
-            return
-
+        title = self._get_clean_text(self.title_entry)
+        tags = self._get_clean_text(self.tags_entry)
         due = getattr(self.due_widget, "get_date", lambda: self.due_widget.get_date())()
         priority = self.priority_var.get()
-        tags = self.tags_entry.get().strip()
+
+        # ----- VALIDATION RULES -----
+
+        # Require title
+        if not title:
+            messagebox.showwarning("Missing title", "Please enter a task title.")
+            return
+
+        # Require due date
+        if not due:
+            messagebox.showwarning("Missing date", "Please pick a due date.")
+            return
+
+        # Require priority
+        if priority is None:
+            messagebox.showwarning("Missing priority", "Please set a priority.")
+            return
+
+        # ----- SAVE TASK -----
         tid = add_task(title, "", due, priority, tags)
 
         # Clear inputs
-        self.title_var.set("")
+        self.title_entry.delete(0, tk.END)
         self.tags_entry.delete(0, tk.END)
 
-        # Refresh task list safely
+        self.title_entry.delete(0, tk.END)
+        self.title_entry._restore()  # restore placeholder
+
+        self.tags_entry.delete(0, tk.END)
+        self.tags_entry._restore()  # restore placeholder
+
+        # Reset priority spinbox
+        self.priority_var.set(0)
+
+        # Reset date entry
+        self.due_widget.set_date("")  # clear date
+
+        # Reload list
         self.root.after(0, self.load_tasks)
         logger.info(f"Added task {tid}: {title}")
 
@@ -229,3 +263,14 @@ class TaskerApp:
         rows.sort(key=lambda r: convert(r[0]), reverse=self.sort_state[col])
         for index, (val, iid) in enumerate(rows):
             self.tree.move(iid, "", index)
+
+    def _is_placeholder(self, entry_widget):
+        if isinstance(entry_widget, PlaceholderEntry):
+            return entry_widget._is_placeholder()
+        return False
+
+    def _get_clean_text(self, entry_widget):
+        if isinstance(entry_widget, PlaceholderEntry):
+            if entry_widget._is_placeholder():
+                return ""
+        return entry_widget.get().strip()

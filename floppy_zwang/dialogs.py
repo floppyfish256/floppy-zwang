@@ -1,9 +1,8 @@
-# dialogs.py
 import datetime
 import tkinter as tk
 from tkinter import ttk
 
-from widgets import DateEntry  # our pure-tkcalendar
+from widgets import DateEntry
 from widgets import PlaceholderEntry
 
 class EditDialog:
@@ -19,7 +18,7 @@ class EditDialog:
         self.window.protocol("WM_DELETE_WINDOW", self.cancel)
 
         self.build_ui()
-        # ensure visible and focused
+
         self.window.update_idletasks()
         self.window.deiconify()
         self.window.focus_force()

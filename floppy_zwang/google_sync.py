@@ -7,8 +7,12 @@ from google.auth.transport.requests import Request
 from db import get_gc_event_id, map_task_to_gc
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
-CREDENTIALS_FILE = "credentials.json"
-TOKEN_PICKLE = "token.pickle"
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SECRETS_DIR = os.path.join(BASE_DIR, "..", "secrets")
+
+CREDENTIALS_FILE = os.path.join(SECRETS_DIR, "credentials.json")
+TOKEN_PICKLE = os.path.join(SECRETS_DIR, "token.pickle")
 
 
 def google_get_service():
@@ -67,7 +71,7 @@ def push_task_to_google(task):
             ).execute()
             return updated["id"]
         except Exception:
-            pass  # recreate event
+            pass
 
     created = service.events().insert(calendarId="primary", body=event_body).execute()
     return created["id"]
